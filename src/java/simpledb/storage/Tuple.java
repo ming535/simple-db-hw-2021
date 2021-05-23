@@ -1,6 +1,9 @@
 package simpledb.storage;
 
+import simpledb.common.Type;
+
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -22,6 +25,10 @@ public class Tuple implements Serializable {
      */
     public Tuple(TupleDesc td) {
         // some code goes here
+        int numFields = td.numFields();
+
+        tupleDesc = td;
+        fieldArray = new Field[numFields];
     }
 
     /**
@@ -29,7 +36,7 @@ public class Tuple implements Serializable {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return tupleDesc;
     }
 
     /**
@@ -38,7 +45,7 @@ public class Tuple implements Serializable {
      */
     public RecordId getRecordId() {
         // some code goes here
-        return null;
+        return recordId;
     }
 
     /**
@@ -49,6 +56,7 @@ public class Tuple implements Serializable {
      */
     public void setRecordId(RecordId rid) {
         // some code goes here
+        recordId = rid;
     }
 
     /**
@@ -61,6 +69,7 @@ public class Tuple implements Serializable {
      */
     public void setField(int i, Field f) {
         // some code goes here
+        fieldArray[i] = f;
     }
 
     /**
@@ -71,7 +80,7 @@ public class Tuple implements Serializable {
      */
     public Field getField(int i) {
         // some code goes here
-        return null;
+        return fieldArray[i];
     }
 
     /**
@@ -82,9 +91,14 @@ public class Tuple implements Serializable {
      *
      * where \t is any whitespace (except a newline)
      */
+    @Override
     public String toString() {
         // some code goes here
-        throw new UnsupportedOperationException("Implement this");
+        String s = new String();
+        for (Field f : fieldArray) {
+            s = s + f.toString() + "\t";
+        }
+        return s;
     }
 
     /**
@@ -94,7 +108,7 @@ public class Tuple implements Serializable {
     public Iterator<Field> fields()
     {
         // some code goes here
-        return null;
+        return Arrays.stream(fieldArray).iterator();
     }
 
     /**
@@ -103,5 +117,10 @@ public class Tuple implements Serializable {
     public void resetTupleDesc(TupleDesc td)
     {
         // some code goes here
+        tupleDesc = td;
     }
+
+    RecordId recordId;
+    TupleDesc tupleDesc;
+    Field []fieldArray;
 }
