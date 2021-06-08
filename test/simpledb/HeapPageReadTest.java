@@ -2,6 +2,7 @@ package simpledb;
 
 import simpledb.TestUtil.SkeletonFile;
 import simpledb.common.Database;
+import simpledb.common.Debug;
 import simpledb.common.Utility;
 import simpledb.storage.*;
 import simpledb.systemtest.SimpleDbTestBase;
@@ -91,8 +92,11 @@ public class HeapPageReadTest extends SimpleDbTestBase {
         Iterator<Tuple> it = page.iterator();
 
         int row = 0;
+        int i = 0;
         while (it.hasNext()) {
             Tuple tup = it.next();
+            Debug.log(-1, "tuple idx: %d", i);
+            i++;
             IntField f0 = (IntField) tup.getField(0);
             IntField f1 = (IntField) tup.getField(1);
 

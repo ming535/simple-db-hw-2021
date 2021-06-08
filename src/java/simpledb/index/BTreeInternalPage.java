@@ -142,6 +142,7 @@ public class BTreeInternalPage extends BTreePage {
 
 	/** Return a view of this page before it was modified
         -- used by recovery */
+	@Override
 	public BTreeInternalPage getBeforeImage(){
 		try {
 			byte[] oldDataRef = null;
@@ -158,6 +159,7 @@ public class BTreeInternalPage extends BTreePage {
 		return null;
 	}
 
+	@Override
 	public void setBeforeImage() {
 		synchronized(oldDataLock)
 		{
@@ -235,7 +237,8 @@ public class BTreeInternalPage extends BTreePage {
 	 * @see #BTreeInternalPage
 	 * @return A byte array correspond to the bytes of this page.
 	 */
-	public byte[] getPageData() {
+	@Override
+    public byte[] getPageData() {
 		int len = BufferPool.getPageSize();
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(len);
 		DataOutputStream dos = new DataOutputStream(baos);

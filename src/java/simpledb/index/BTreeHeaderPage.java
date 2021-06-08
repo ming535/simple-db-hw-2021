@@ -99,6 +99,7 @@ public class BTreeHeaderPage implements Page {
 
 	/** Return a view of this page before it was modified
         -- used by recovery */
+	@Override
 	public BTreeHeaderPage getBeforeImage(){
 		try {
 			byte[] oldDataRef = null;
@@ -115,6 +116,7 @@ public class BTreeHeaderPage implements Page {
 		return null;
 	}
 
+	@Override
 	public void setBeforeImage() {
 		synchronized(oldDataLock)
 		{
@@ -125,7 +127,8 @@ public class BTreeHeaderPage implements Page {
 	/**
 	 * @return the PageId associated with this page.
 	 */
-	public BTreePageId getId() {
+	@Override
+    public BTreePageId getId() {
 		return pid;
 	}
 
@@ -140,6 +143,7 @@ public class BTreeHeaderPage implements Page {
 	 * @see #BTreeHeaderPage
 	 * @return A byte array correspond to the bytes of this page.
 	 */
+	@Override
 	public byte[] getPageData() {
 		int len = BufferPool.getPageSize();
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(len);
@@ -258,6 +262,7 @@ public class BTreeHeaderPage implements Page {
 	 * Marks this page as dirty/not dirty and record that transaction
 	 * that did the dirtying
 	 */
+	@Override
 	public void markDirty(boolean dirty, TransactionId tid) {
 		this.dirty = dirty;
 		if (dirty) this.dirtier = tid;
@@ -266,6 +271,7 @@ public class BTreeHeaderPage implements Page {
 	/**
 	 * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
 	 */
+	@Override
 	public TransactionId isDirty() {
 		if (this.dirty)
 			return this.dirtier;

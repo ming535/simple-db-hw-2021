@@ -51,6 +51,7 @@ public class BTreeRootPtrPage implements Page {
 		setBeforeImage();
 	}
 
+	@Override
 	public void setBeforeImage() {
 		oldData = getPageData().clone();
 	}
@@ -58,7 +59,8 @@ public class BTreeRootPtrPage implements Page {
 	/**
 	 * @return the PageId associated with this page.
 	 */
-	public BTreePageId getId() {
+	@Override
+    public BTreePageId getId() {
 		return pid;
 	}
 
@@ -81,6 +83,7 @@ public class BTreeRootPtrPage implements Page {
 	 *
 	 * @return A byte array corresponding to the bytes of this root pointer page.
 	 */
+	@Override
 	public byte[] getPageData(){
         ByteArrayOutputStream baos = new ByteArrayOutputStream(PAGE_SIZE);
 		DataOutputStream dos = new DataOutputStream(baos);
@@ -128,11 +131,13 @@ public class BTreeRootPtrPage implements Page {
         return new byte[PAGE_SIZE]; //all 0
 	}
 
+	@Override
 	public void markDirty(boolean dirty, TransactionId tid){
 		this.dirty = dirty;
 		if (dirty) this.dirtier = tid;
 	}
 
+	@Override
 	public TransactionId isDirty() {
 		if (this.dirty)
 			return this.dirtier;
@@ -142,6 +147,7 @@ public class BTreeRootPtrPage implements Page {
 
 	/** Return a view of this page before it was modified
         -- used by recovery */
+	@Override
 	public BTreeRootPtrPage getBeforeImage(){
 		try {
 			return new BTreeRootPtrPage(pid,oldData);

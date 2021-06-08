@@ -1,15 +1,14 @@
 package simpledb.storage;
 
-import simpledb.common.Database;
-import simpledb.common.Permissions;
-import simpledb.common.DbException;
-import simpledb.common.DeadlockException;
+import simpledb.common.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -33,6 +32,14 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+    class PageFrame {
+        Object mutex;
+        Page page;
+    }
+
+    private final int maxNumPages;
+    private final Lock bigLock = new ReentrantLock();
+    HashMap<PageId, Page> pageTable;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -40,6 +47,8 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         // some code goes here
+        this.maxNumPages = numPages;
+        pageTable = new HashMap<>();
     }
     
     public static int getPageSize() {
@@ -74,7 +83,29 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        Page page;
+        int tableid = pid.getTableId();
+        Catalog catalog = Database.getCatalog();
+        DbFile dbFile = catalog.getDatabaseFile(tableid);
+
+        bigLock.lock();
+        try {
+            page = pageTable.get(pid);
+            if (page != null) {
+                // do nothing
+            } else {
+                if (pageTable.size() >= maxNumPages) {
+                    evictPage();
+                }
+                assert(pageTable.size() < maxNumPages);
+                page = dbFile.readPage(pid);
+                pageTable.put(pid, page);
+            }
+        } finally {
+            bigLock.unlock();
+        }
+
+        return page;
     }
 
     /**

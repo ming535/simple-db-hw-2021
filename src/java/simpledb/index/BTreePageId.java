@@ -49,6 +49,7 @@ public class BTreePageId implements PageId {
 	}
 
 	/** @return the table associated with this PageId */
+	@Override
 	public int getTableId() {
 		return tableId;
 	}
@@ -74,6 +75,7 @@ public class BTreePageId implements PageId {
 	 *   key in a hash table in the BufferPool, for example.)
 	 * @see BufferPool
 	 */
+	@Override
 	public int hashCode() {
 	    return Objects.hash(tableId, pgNo, pgcateg);
 	}
@@ -85,7 +87,8 @@ public class BTreePageId implements PageId {
 	 * @return true if the objects are equal (e.g., page numbers, table
 	 *   ids and pgcateg are the same)
 	 */
-	public boolean equals(Object o) {
+	@Override
+    public boolean equals(Object o) {
 		if (!(o instanceof BTreePageId))
 			return false;
 		BTreePageId p = (BTreePageId)o;
@@ -106,6 +109,7 @@ public class BTreePageId implements PageId {
 	 *  number of integers that corresponds to number of args to one of the
 	 *  constructors.
 	 */
+	@Override
 	public int[] serialize() {
 		int[] data = new int[3];
 

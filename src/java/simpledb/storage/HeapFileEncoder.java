@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * HeapFileEncoder reads a comma delimited text file or accepts
  * an array of tuples and converts it to
- * pages of binary data in the appropriate format for simpledb heap pages
+ * pages of binary data in the appropriate format for simpledb heap pages.
  * Pages are padded out to a specified length, and written consecutive in a
  * data file.
  */
@@ -102,8 +102,9 @@ public class HeapFileEncoder {
     //  per record, we need one bit; there are nrecords per page, so we need
     // nrecords bits, i.e., ((nrecords/32)+1) integers.
     int nheaderbytes = (nrecords / 8);
-    if (nheaderbytes * 8 < nrecords)
+    if (nheaderbytes * 8 < nrecords) {
         nheaderbytes++;  //ceiling
+    }
     int nheaderbits = nheaderbytes * 8;
 
     BufferedReader br = new BufferedReader(new FileReader(inFile));
@@ -188,8 +189,9 @@ public class HeapFileEncoder {
             byte headerbyte = 0;
             
             for (i=0; i<nheaderbits; i++) {
-                if (i < recordcount)
+                if (i < recordcount) {
                     headerbyte |= (1 << (i % 8));
+                }
                 
                 if (((i+1) % 8) == 0) {
                     headerStream.writeByte(headerbyte);
@@ -197,13 +199,15 @@ public class HeapFileEncoder {
                 }
             }
             
-            if (i % 8 > 0)
+            if (i % 8 > 0) {
                 headerStream.writeByte(headerbyte);
+            }
             
             // pad the rest of the page with zeroes
             
-            for (i=0; i<(npagebytes - (recordcount * nrecbytes + nheaderbytes)); i++)
+            for (i=0; i<(npagebytes - (recordcount * nrecbytes + nheaderbytes)); i++) {
                 pageStream.writeByte(0);
+            }
             
             // write header and body to file
             headerStream.flush();
