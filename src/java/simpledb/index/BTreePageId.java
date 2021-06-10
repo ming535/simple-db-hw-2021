@@ -58,7 +58,8 @@ public class BTreePageId implements PageId {
 	 * @return the page number in the table getTableId() associated with
 	 *   this PageId
 	 */
-	public int getPageNumber() {
+	@Override
+    public int getPageNumber() {
 		return pgNo;
 	}
 
