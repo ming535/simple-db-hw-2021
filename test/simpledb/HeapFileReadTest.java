@@ -83,7 +83,8 @@ public class HeapFileReadTest extends SimpleDbTestBase {
 
     @Test
     public void testIteratorBasic() throws Exception {
-        HeapFile smallFile = SystemTestUtil.createRandomHeapFile(2, 3, null,
+        int rowCount = 512;
+        HeapFile smallFile = SystemTestUtil.createRandomHeapFile(2, rowCount, null,
                 null);
 
         DbFileIterator it = smallFile.iterator(tid);
@@ -101,7 +102,7 @@ public class HeapFileReadTest extends SimpleDbTestBase {
             assertNotNull(it.next());
             count += 1;
         }
-        assertEquals(3, count);
+        assertEquals(rowCount, count);
         it.close();
     }
 

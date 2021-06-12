@@ -50,6 +50,7 @@ public class TupleDesc implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private ArrayList<TDItem> tdItems;
     /**
      * Create a new TupleDesc with typeAr.length fields with fields of the
      * specified types, with associated named fields.
@@ -259,6 +260,4 @@ public class TupleDesc implements Serializable {
         }
         return s;
     }
-
-    ArrayList<TDItem> tdItems;
 }

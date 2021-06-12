@@ -30,7 +30,7 @@ public class HeapPage implements Page {
             this.idx = 0;
             this.validSlots = page.numSlots - page.getNumEmptySlots();
             this.consumedSlots = 0;
-            Debug.log(-1, "validSlots: %d", this.validSlots);
+//            Debug.log(-1, "pageNo: %d, validSlots: %d", this.idx, this.validSlots);
         }
 
         @Override
@@ -103,7 +103,7 @@ public class HeapPage implements Page {
         dis.close();
 
         setBeforeImage();
-        Debug.log(-1,"numSlots %d", this.numSlots);
+//        Debug.log(-1,"pageNo: %d, numSlots %d", id.getPageNumber(), this.numSlots);
     }
 
     /** Retrieve the number of tuples on this page.

@@ -124,6 +124,7 @@ public class SystemTestUtil {
         }
 
         iterator.open();
+        int i = 0;
         while (iterator.hasNext()) {
             Tuple t = iterator.next();
             List<Integer> list = tupleToList(t);
@@ -131,7 +132,11 @@ public class SystemTestUtil {
             Debug.log("scanned tuple: %s (%s)", t, isExpected ? "expected" : "not expected");
             if (!isExpected) {
                 Assert.fail("expected tuples does not contain: " + t);
+            } else {
+//                Debug.log(-1, "ok with %d", i);
             }
+
+            i++;
         }
         iterator.close();
 
