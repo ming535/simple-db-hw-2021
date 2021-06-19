@@ -1,5 +1,6 @@
 package simpledb.execution;
 
+import simpledb.common.Debug;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.common.DbException;
 import simpledb.storage.Tuple;
@@ -14,6 +15,11 @@ public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private JoinPredicate p;
+    private OpIterator child1;
+    private OpIterator child2;
+    private Tuple child1_next;
+    private Tuple child2_next;
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -27,11 +33,14 @@ public class Join extends Operator {
      */
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
+        this.p = p;
+        this.child1 = child1;
+        this.child2 = child2;
     }
 
     public JoinPredicate getJoinPredicate() {
         // some code goes here
-        return null;
+        return this.p;
     }
 
     /**
@@ -41,7 +50,7 @@ public class Join extends Operator {
      * */
     public String getJoinField1Name() {
         // some code goes here
-        return null;
+        return this.child1.getTupleDesc().getFieldName(this.p.getField1());
     }
 
     /**
@@ -51,29 +60,41 @@ public class Join extends Operator {
      * */
     public String getJoinField2Name() {
         // some code goes here
-        return null;
+        return this.child2.getTupleDesc().getFieldName(this.p.getField2());
     }
 
     /**
      * @see TupleDesc#merge(TupleDesc, TupleDesc) for possible
      *      implementation logic.
      */
+    @Override
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return TupleDesc.merge(this.child1.getTupleDesc(), this.child2.getTupleDesc());
     }
 
+    @Override
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        child1.open();
+        child2.open();
+        super.open();
     }
 
+    @Override
     public void close() {
         // some code goes here
+        child1.close();
+        child2.close();
+        super.close();
     }
 
+    @Override
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        child1.rewind();
+        child2.rewind();
     }
 
     /**
@@ -94,20 +115,65 @@ public class Join extends Operator {
      * @return The next matching tuple.
      * @see JoinPredicate#filter
      */
+    @Override
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-        return null;
+        Tuple result = null;
+
+        if (child2_next == null && child2.hasNext()) {
+            child2_next = child2.next();
+        }
+
+        if (child1_next == null && child1.hasNext()) {
+            child1_next = child1.next();
+        }
+
+        while (child1_next != null && result == null) {
+            if (this.p.filter(child1_next, child2_next)) {
+                TupleDesc td = getTupleDesc();
+                result = new Tuple(td);
+                for (int i = 0; i < child1_next.getTupleDesc().numFields(); i++) {
+                    result.setField(i, child1_next.getField(i));
+                }
+                for (int j = 0; j < child2_next.getTupleDesc().numFields(); j++) {
+                    result.setField(j + child1_next.getTupleDesc().numFields(), child2_next.getField(j));
+                }
+//                Debug.log(-1, "join match, outer: %s, inner: %s", child1_next, child2_next);
+            } else {
+//                Debug.log(-1, "join mismatch, outer: %s, inner: %s", child1_next, child2_next);
+            }
+
+            if (child2.hasNext()) {
+                child2_next = child2.next();
+            } else {
+                child2_next = null;
+                if (child1.hasNext()) {
+                    child1_next = child1.next();
+                    child2.rewind();
+                    child2_next = child2.next();
+                } else {
+                    child1_next = null;
+                }
+            }
+        }
+
+        return result;
     }
+
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new OpIterator[]{child1, child2};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        if (children.length == 2) {
+            this.child1 = children[0];
+            this.child2 = children[1];
+        }
     }
 
 }

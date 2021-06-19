@@ -1,5 +1,6 @@
 package simpledb.execution;
 
+import simpledb.common.Debug;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.common.DbException;
 import simpledb.storage.Tuple;
@@ -16,21 +17,26 @@ public abstract class Operator implements OpIterator {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public boolean hasNext() throws DbException, TransactionAbortedException {
-        if (!this.open)
+        if (!this.open) {
             throw new IllegalStateException("Operator not yet open");
+        }
         
-        if (next == null)
+        if (next == null) {
             next = fetchNext();
+        }
         return next != null;
     }
 
+    @Override
     public Tuple next() throws DbException, TransactionAbortedException,
             NoSuchElementException {
         if (next == null) {
             next = fetchNext();
-            if (next == null)
+            if (next == null) {
                 throw new NoSuchElementException();
+            }
         }
 
         Tuple result = next;
@@ -53,6 +59,7 @@ public abstract class Operator implements OpIterator {
      * Closes this iterator. If overridden by a subclass, they should call
      * super.close() in order for Operator's internal state to be consistent.
      */
+    @Override
     public void close() {
         // Ensures that a future call to next() will fail
         next = null;
@@ -63,7 +70,9 @@ public abstract class Operator implements OpIterator {
     private boolean open = false;
     private int estimatedCardinality = 0;
 
+    @Override
     public void open() throws DbException, TransactionAbortedException {
+        Debug.log(-1, "Operator open");
         this.open = true;
     }
 
@@ -90,6 +99,7 @@ public abstract class Operator implements OpIterator {
     /**
      * @return return the TupleDesc of the output tuples of this operator
      * */
+    @Override
     public abstract TupleDesc getTupleDesc();
 
     /**

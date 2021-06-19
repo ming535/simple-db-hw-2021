@@ -83,6 +83,7 @@ public class Aggregate extends Operator {
         return aop.toString();
     }
 
+    @Override
     public void open() throws NoSuchElementException, DbException,
             TransactionAbortedException {
         // some code goes here
@@ -95,6 +96,7 @@ public class Aggregate extends Operator {
      * the result tuple should contain one field representing the result of the
      * aggregate. Should return null if there are no more tuples.
      */
+    @Override
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
         return null;
@@ -120,6 +122,7 @@ public class Aggregate extends Operator {
         return null;
     }
 
+    @Override
     public void close() {
         // some code goes here
     }

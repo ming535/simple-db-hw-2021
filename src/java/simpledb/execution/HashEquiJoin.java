@@ -72,6 +72,7 @@ public class HashEquiJoin extends Operator {
 
     }
 
+    @Override
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         child1.open();
@@ -80,6 +81,7 @@ public class HashEquiJoin extends Operator {
         super.open();
     }
 
+    @Override
     public void close() {
         super.close();
         child2.close();
@@ -131,6 +133,7 @@ public class HashEquiJoin extends Operator {
 
     }
 
+    @Override
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         if (listIt != null && listIt.hasNext()) {
             return processList();

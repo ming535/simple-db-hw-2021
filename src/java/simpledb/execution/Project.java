@@ -48,12 +48,14 @@ public class Project extends Operator {
         return td;
     }
 
+    @Override
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         child.open();
         super.open();
     }
 
+    @Override
     public void close() {
         super.close();
         child.close();
@@ -69,6 +71,7 @@ public class Project extends Operator {
      *
      * @return The next tuple, or null if there are no more tuples
      */
+    @Override
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
         if (!child.hasNext()) return null;

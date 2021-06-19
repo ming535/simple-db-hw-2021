@@ -34,19 +34,23 @@ public class Insert extends Operator {
         // some code goes here
     }
 
+    @Override
     public TupleDesc getTupleDesc() {
         // some code goes here
         return null;
     }
 
+    @Override
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
     }
 
+    @Override
     public void close() {
         // some code goes here
     }
 
+    @Override
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
     }
@@ -64,6 +68,7 @@ public class Insert extends Operator {
      * @see Database#getBufferPool
      * @see BufferPool#insertTuple
      */
+    @Override
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
         return null;

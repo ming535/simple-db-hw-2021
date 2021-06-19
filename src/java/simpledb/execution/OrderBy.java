@@ -59,6 +59,7 @@ public class OrderBy extends Operator {
         return td;
     }
 
+    @Override
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         child.open();
@@ -70,6 +71,7 @@ public class OrderBy extends Operator {
         super.open();
     }
 
+    @Override
     public void close() {
         super.close();
         it = null;
@@ -86,6 +88,7 @@ public class OrderBy extends Operator {
      * @return The next tuple in the ordering, or null if there are no more
      *         tuples
      */
+    @Override
     protected Tuple fetchNext() throws NoSuchElementException {
         if (it != null && it.hasNext()) {
             return it.next();

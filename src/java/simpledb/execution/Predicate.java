@@ -27,26 +27,37 @@ public class Predicate implements Serializable {
             return values()[i];
         }
 
+        @Override
         public String toString() {
-            if (this == EQUALS)
+            if (this == EQUALS) {
                 return "=";
-            if (this == GREATER_THAN)
+            }
+            if (this == GREATER_THAN) {
                 return ">";
-            if (this == LESS_THAN)
+            }
+            if (this == LESS_THAN) {
                 return "<";
-            if (this == LESS_THAN_OR_EQ)
+            }
+            if (this == LESS_THAN_OR_EQ) {
                 return "<=";
-            if (this == GREATER_THAN_OR_EQ)
+            }
+            if (this == GREATER_THAN_OR_EQ) {
                 return ">=";
-            if (this == LIKE)
+            }
+            if (this == LIKE) {
                 return "LIKE";
-            if (this == NOT_EQUALS)
+            }
+            if (this == NOT_EQUALS) {
                 return "<>";
+            }
             throw new IllegalStateException("impossible to reach here");
         }
 
     }
-    
+
+    private int field_idx;
+    private Op op;
+    private Field operand;
     /**
      * Constructor.
      * 
@@ -59,6 +70,9 @@ public class Predicate implements Serializable {
      */
     public Predicate(int field, Op op, Field operand) {
         // some code goes here
+        this.field_idx = field;
+        this.op = op;
+        this.operand = operand;
     }
 
     /**
@@ -67,7 +81,7 @@ public class Predicate implements Serializable {
     public int getField()
     {
         // some code goes here
-        return -1;
+        return this.field_idx;
     }
 
     /**
@@ -76,7 +90,7 @@ public class Predicate implements Serializable {
     public Op getOp()
     {
         // some code goes here
-        return null;
+        return this.op;
     }
     
     /**
@@ -85,7 +99,7 @@ public class Predicate implements Serializable {
     public Field getOperand()
     {
         // some code goes here
-        return null;
+        return this.operand;
     }
     
     /**
@@ -100,15 +114,17 @@ public class Predicate implements Serializable {
      */
     public boolean filter(Tuple t) {
         // some code goes here
-        return false;
+        return t.getField(this.field_idx).compare(this.op, this.operand);
+//        return this.operand.compare(this.op, t.getField(this.field_idx));
     }
 
     /**
      * Returns something useful, like "f = field_id op = op_string operand =
      * operand_string"
      */
+    @Override
     public String toString() {
         // some code goes here
-        return "";
+        return "f" + " "  + this.op + " " + this.operand.toString();
     }
 }
