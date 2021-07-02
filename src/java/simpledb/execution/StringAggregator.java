@@ -27,6 +27,7 @@ public class StringAggregator implements Aggregator {
      * Merge a new tuple into the aggregate, grouping as indicated in the constructor
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
+    @Override
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
     }
@@ -39,6 +40,7 @@ public class StringAggregator implements Aggregator {
      *   grouping. The aggregateVal is determined by the type of
      *   aggregate specified in the constructor.
      */
+    @Override
     public OpIterator iterator() {
         // some code goes here
         throw new UnsupportedOperationException("please implement me for lab2");

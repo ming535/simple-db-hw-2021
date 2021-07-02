@@ -50,6 +50,7 @@ public interface Aggregator extends Serializable {
             return values()[i];
         }
         
+        @Override
         public String toString()
         {
         	if (this==MIN)
