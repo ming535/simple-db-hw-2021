@@ -8,6 +8,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 import simpledb.common.Database;
 import simpledb.common.DbException;
+import simpledb.common.Debug;
 import simpledb.execution.Insert;
 import simpledb.execution.SeqScan;
 import simpledb.storage.HeapFile;
@@ -37,12 +38,15 @@ public class InsertTest extends SimpleDbTestBase {
 //        Query q = new Query(insOp, tid);
         insOp.open();
         boolean hasResult = false;
+        int i = 0;
         while (insOp.hasNext()) {
+            Debug.log(-1, "insert iter %d", i);
             Tuple tup = insOp.next();
             assertFalse(hasResult);
             hasResult = true;
             assertEquals(SystemTestUtil.SINGLE_INT_DESCRIPTOR, tup.getTupleDesc());
             assertEquals(sourceRows, ((IntField) tup.getField(0)).getValue());
+            i++;
         }
         assertTrue(hasResult);
         insOp.close();

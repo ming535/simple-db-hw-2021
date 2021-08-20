@@ -2,7 +2,6 @@ package simpledb.storage;
 
 import simpledb.common.Database;
 import simpledb.common.DbException;
-import simpledb.common.Debug;
 import simpledb.common.Catalog;
 import simpledb.transaction.TransactionId;
 
@@ -21,35 +20,37 @@ public class HeapPage implements Page {
 
     class PageIterator implements Iterator<Tuple> {
         final HeapPage page;
-        int idx;
-        int consumedSlots;
-        int validSlots;
+        int curIdx;
 
         public PageIterator(HeapPage page) {
             this.page = page;
-            this.idx = 0;
-            this.validSlots = page.numSlots - page.getNumEmptySlots();
-            this.consumedSlots = 0;
+            this.curIdx = 0;
 //            Debug.log(-1, "pageNo: %d, validSlots: %d", this.idx, this.validSlots);
         }
 
         @Override
         public boolean hasNext() {
-            return this.consumedSlots < this.validSlots;
+            if (curIdx == page.numSlots) {
+                return false;
+            }
+
+            if (page.tuples[curIdx] != null) {
+                return true;
+            }
+
+            while (curIdx < page.numSlots - 1) {
+                curIdx++;
+                if (page.tuples[curIdx] != null) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
         public Tuple next() {
-            Tuple t = null;
-            // find the first valid Tuple
-            while (idx < numSlots) {
-                t = page.tuples[idx];
-                idx++;
-                if (t != null) {
-                    this.consumedSlots++;
-                    break;
-                }
-            }
+            Tuple t = page.tuples[curIdx];
+            curIdx++;
             return t;
         }
     }
@@ -296,6 +297,21 @@ public class HeapPage implements Page {
     public void deleteTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        if (!t.getTupleDesc().equals(td)) {
+            throw new DbException("tuple description not match");
+        }
+
+        if (!t.getRecordId().getPageId().equals(pid)) {
+            throw new DbException(String.format("tuple not belongs to this page, tuple pid %d, page id: %d", t.getRecordId().getPageId().getPageNumber(), pid.getPageNumber()));
+        }
+
+        int slot = t.getRecordId().getTupleNumber();
+        if (!isSlotUsed(slot)) {
+            throw new DbException("slot not used");
+        }
+
+        tuples[slot] = null;
+        markSlotUsed(slot, false);
     }
 
     /**
@@ -308,6 +324,20 @@ public class HeapPage implements Page {
     public void insertTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        if (!t.getTupleDesc().equals(td)) {
+            throw new DbException("tuple description not match");
+        }
+
+        for (int i = 0; i < numSlots; i++) {
+            if (!isSlotUsed(i)) {
+                t.setRecordId(new RecordId(pid, i));
+                tuples[i] = t;
+                markSlotUsed(i, true);
+                return;
+            }
+        }
+
+        throw new DbException("no empty slot");
     }
 
     /**
@@ -360,6 +390,11 @@ public class HeapPage implements Page {
     private void markSlotUsed(int i, boolean value) {
         // some code goes here
         // not necessary for lab1
+        if (value) {
+            header[i/8] = (byte) (header[i/8] | (1 << (i % 8)));
+        } else {
+            header[i/8] = (byte) (header[i/8] & (~(1 << (i % 8))));
+        }
     }
 
     /**

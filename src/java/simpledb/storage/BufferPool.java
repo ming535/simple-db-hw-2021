@@ -7,6 +7,7 @@ import simpledb.transaction.TransactionId;
 import java.io.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -170,6 +171,13 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbfile = Database.getCatalog().getDatabaseFile(tableId);
+        List<Page> pages = dbfile.insertTuple(tid, t);
+        for (int i = 0; i < pages.size(); i++) {
+            Page page = pages.get(i);
+            page.markDirty(true, tid);
+            pageTable.put(page.getId(), page);
+        }
     }
 
     /**
@@ -189,6 +197,8 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbfile = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        dbfile.deleteTuple(tid, t);
     }
 
     /**

@@ -7,6 +7,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import junit.framework.JUnit4TestAdapter;
 import simpledb.common.Database;
+import simpledb.common.Debug;
 import simpledb.common.Utility;
 import simpledb.storage.*;
 import simpledb.systemtest.SystemTestUtil;
@@ -34,6 +35,7 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
      */
     @Test public void addTuple() throws Exception {
         // we should be able to add 504 tuples on an empty page.
+
         for (int i = 0; i < 504; ++i) {
             empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
             assertEquals(1, empty.numPages());

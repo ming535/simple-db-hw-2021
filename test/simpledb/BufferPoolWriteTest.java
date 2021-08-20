@@ -11,10 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import simpledb.common.Database;
-import simpledb.common.DbException;
-import simpledb.common.Permissions;
-import simpledb.common.Utility;
+import simpledb.common.*;
 import simpledb.storage.*;
 import simpledb.systemtest.SystemTestUtil;
 import static org.junit.Assert.*;
@@ -134,6 +131,7 @@ public class BufferPoolWriteTest extends TestUtil.CreateHeapFile {
     	
     	int count = 0;
     	while(it.hasNext()) {
+    		Debug.log(-1, "count: %d", count);
     		it.next();
     		count++;
     	}
