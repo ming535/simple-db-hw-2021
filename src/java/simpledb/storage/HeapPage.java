@@ -61,6 +61,9 @@ public class HeapPage implements Page {
     final Tuple[] tuples;
     final int numSlots;
 
+
+    private boolean isDirty;
+    private TransactionId dirtyXid;
     byte[] oldData;
     private final Byte oldDataLock= (byte) 0;
 
@@ -84,6 +87,8 @@ public class HeapPage implements Page {
         this.pid = id;
         this.td = Database.getCatalog().getTupleDesc(id.getTableId());
         this.numSlots = getNumTuples();
+        this.isDirty = false;
+        this.dirtyXid = null;
         DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
 
         // allocate and read the header slots of this page
@@ -348,6 +353,12 @@ public class HeapPage implements Page {
     public void markDirty(boolean dirty, TransactionId tid) {
         // some code goes here
 	// not necessary for lab1
+        this.isDirty = dirty;
+        if (dirty) {
+            this.dirtyXid = tid;
+        } else {
+            this.dirtyXid = null;
+        }
     }
 
     /**
@@ -357,7 +368,11 @@ public class HeapPage implements Page {
     public TransactionId isDirty() {
         // some code goes here
 	// Not necessary for lab1
-        return null;      
+        if (this.isDirty) {
+            return this.dirtyXid;
+        } else {
+            return null;
+        }
     }
 
     /**

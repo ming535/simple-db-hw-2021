@@ -7,6 +7,7 @@ import simpledb.transaction.TransactionId;
 import java.io.*;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -209,7 +210,12 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
         // not necessary for lab1
-
+        Iterator it = this.pageTable.entrySet().iterator();
+        while(it.hasNext()) {
+            HashMap.Entry pair = (HashMap.Entry)it.next();
+            PageId pageid = (PageId)pair.getKey();
+            flushPage(pageid);
+        }
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -223,6 +229,7 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+        pageTable.remove(pid);
     }
 
     /**
@@ -232,6 +239,12 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        Page page = pageTable.get(pid);
+        if (page != null) {
+            DbFile dbfile = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            dbfile.writePage(page);
+        }
+
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -239,6 +252,8 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+
+
     }
 
     /**
@@ -248,6 +263,23 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+        // evict the first page scanned
+        Iterator it = this.pageTable.entrySet().iterator();
+        if (it.hasNext()) {
+            HashMap.Entry pair = (HashMap.Entry)it.next();
+            PageId pageid = (PageId)pair.getKey();
+            Page page = (Page)pair.getValue();
+            TransactionId xid = page.isDirty();
+            if (xid != null) {
+                try {
+                    flushPage(pageid);
+                } catch (Exception e) {
+                    throw new DbException("failed to flush page");
+                }
+            }
+
+            it.remove();
+        }
     }
 
 }

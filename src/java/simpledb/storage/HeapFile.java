@@ -222,6 +222,10 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        SeekableByteChannel sbc = Files.newByteChannel(this.file.toPath());
+        sbc.position(page.getId().getPageNumber() * BufferPool.getPageSize());
+        ByteBuffer buffer = ByteBuffer.wrap(page.getPageData());
+        sbc.write(buffer);
     }
 
     /**
