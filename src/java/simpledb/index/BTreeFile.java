@@ -1051,7 +1051,8 @@ public class BTreeFile implements DbFile {
 	 * @param tid - the transaction id
 	 * @return an iterator for all the tuples in this file
 	 */
-	public DbFileIterator iterator(TransactionId tid) {
+	@Override
+    public DbFileIterator iterator(TransactionId tid) {
 		return new BTreeFileIterator(this, tid);
 	}
 

@@ -115,7 +115,7 @@ public class HeapPage implements Page {
     /** Retrieve the number of tuples on this page.
         @return the number of tuples on this page
     */
-    private int getNumTuples() {        
+    private int getNumTuples() {
         // some code goes here
         int tupleBits = this.td.getSize() * 8 + 1;
         int pageSizeBits = BufferPool.getPageSize() * 8;

@@ -2,6 +2,7 @@ package simpledb.optimizer;
 
 import simpledb.common.Database;
 import simpledb.ParsingException;
+import simpledb.common.Debug;
 import simpledb.execution.*;
 import simpledb.storage.TupleDesc;
 
@@ -18,6 +19,8 @@ import javax.swing.tree.*;
 public class JoinOptimizer {
     final LogicalPlan p;
     final List<LogicalJoinNode> joins;
+    Set<String> joinSet;
+    PlanCache planCache;
 
     /**
      * Constructor
@@ -30,6 +33,13 @@ public class JoinOptimizer {
     public JoinOptimizer(LogicalPlan p, List<LogicalJoinNode> joins) {
         this.p = p;
         this.joins = joins;
+        this.joinSet = new HashSet<>();
+        Iterator<LogicalJoinNode> iter = joins.iterator();
+        while (iter.hasNext()) {
+            LogicalJoinNode n = iter.next();
+
+        }
+        this.planCache = new PlanCache();
     }
 
     /**
@@ -99,7 +109,7 @@ public class JoinOptimizer {
      * The cost of the join should be calculated based on the join algorithm (or
      * algorithms) that you implemented for Lab 2. It should be a function of
      * the amount of data that must be read over the course of the query, as
-     * well as the number of CPU opertions performed by your join. Assume that
+     * well as the number of CPU operations performed by your join. Assume that
      * the cost of a single predicate application is roughly 1.
      * 
      * 
@@ -130,7 +140,9 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic
             // nested-loops join.
-            return -1.0;
+            double ioCost = cost1 + card1 * cost2;
+            double cpuCost = card1 * card2;
+            return ioCost + cpuCost;
         }
     }
 
@@ -147,8 +159,10 @@ public class JoinOptimizer {
      *            Cardinality of the right-hand table in the join
      * @param t1pkey
      *            Is the left-hand table a primary-key table?
+     *            Is the left field is unique (a primary key)
      * @param t2pkey
      *            Is the right-hand table a primary-key table?
+     *            Is the right field unique (a primary key)
      * @param stats
      *            The table stats, referenced by table names, not alias
      * @return The cardinality of the join
@@ -176,6 +190,19 @@ public class JoinOptimizer {
                                                    Map<String, Integer> tableAliasToId) {
         int card = 1;
         // some code goes here
+        if (joinOp == Predicate.Op.EQUALS) {
+            if (t1pkey && t2pkey) {
+                card = Math.min(card1, card2);
+            } else if (t1pkey) {
+                card = card2;
+            } else if (t2pkey) {
+                card = card1;
+            } else {
+                card = Math.max(card1, card2);
+            }
+        } else {
+            card = (int)Math.ceil(0.3 * ((double)card1 * card2));
+        }
         return card <= 0 ? 1 : card;
     }
 
@@ -229,7 +256,7 @@ public class JoinOptimizer {
      *         order in which they should be executed.
      * @throws ParsingException
      *             when stats or filter selectivities is missing a table in the
-     *             join, or or when another internal error occurs
+     *             join, or when another internal error occurs
      */
     public List<LogicalJoinNode> orderJoins(
             Map<String, TableStats> stats,
@@ -238,7 +265,63 @@ public class JoinOptimizer {
 
         // some code goes here
         //Replace the following
-        return joins;
+        Set<LogicalJoinNode> joinSet = new HashSet<>(joins);
+        for (int sSize = 1; sSize <= joinSet.size(); sSize++) {
+            Set<Set<LogicalJoinNode>> subSets = enumerateSubsets(joins, sSize);
+            Iterator<Set<LogicalJoinNode>> iter = subSets.iterator();
+            while (iter.hasNext()) {
+                CostCard best = new CostCard();
+                best.cost = Double.MAX_VALUE;
+                Set<LogicalJoinNode> s = iter.next();
+//                Debug.log(-1, "subSets: %s, iter s: %s", subSets, s);
+                // s = {A, B, C, D}
+                // s' = {A, B, C}, {A, C, D}, ...
+                Set<Set<LogicalJoinNode>> sPrimeSet = new HashSet<>();
+                LogicalJoinNode joinToRemove;
+                if (sSize == 1) {
+                    sPrimeSet.add(new HashSet(s));
+                } else {
+                    sPrimeSet = enumerateSubsets(Arrays.asList(s.toArray(new LogicalJoinNode[0])), sSize - 1);
+
+                }
+                Iterator<Set<LogicalJoinNode>> sPrimeIter = sPrimeSet.iterator();
+                while (sPrimeIter.hasNext()) {
+                    Set<LogicalJoinNode> sPrime = sPrimeIter.next();
+                    Set<LogicalJoinNode> sClone = new HashSet(s);
+                    if (sSize == 1) {
+                        assert(sPrime.size() == 1) : "sPrime size = " + sPrime.size();
+                        joinToRemove = sPrime.toArray(new LogicalJoinNode[0])[0];
+                    } else {
+                        sClone.removeAll(sPrime);
+                        assert(sClone.size() == 1) : "sCop size = " + sClone.size();
+                        joinToRemove = sClone.toArray(new LogicalJoinNode[0])[0];
+                    }
+                    assert(joinToRemove != null);
+                    assert(s != null);
+                    assert(planCache != null);
+                    assert(best != null);
+                    CostCard result = computeCostAndCardOfSubplan(stats,
+                            filterSelectivities,
+                            joinToRemove,
+                            s,
+                            best.cost,
+                            planCache);
+                    if (result != null) {
+                        best = result;
+                        planCache.addPlan(new HashSet<>(result.plan), result.cost, result.card, result.plan);
+                    }
+                }
+//                Debug.log(-1, "sSize = %d, s = %s, order: %s",
+//                        sSize,
+//                        s,
+//                        planCache.getOrder(s));
+            }
+        }
+
+        if (explain) {
+            printJoins(joins, planCache, stats, filterSelectivities);
+        }
+        return planCache.getOrder(joinSet);
     }
 
     // ===================== Private Methods =================================

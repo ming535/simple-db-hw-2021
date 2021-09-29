@@ -1,13 +1,13 @@
 package simpledb.optimizer;
 
 import simpledb.common.Database;
+import simpledb.common.Debug;
 import simpledb.common.Type;
 import simpledb.execution.Predicate;
-import simpledb.execution.SeqScan;
+import simpledb.index.BTreeFile;
 import simpledb.storage.*;
-import simpledb.transaction.Transaction;
+import simpledb.transaction.TransactionId;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,6 +68,21 @@ public class TableStats {
      */
     static final int NUM_HIST_BINS = 100;
 
+    class ColumnHistogram {
+        Type type;
+        IntHistogram intHist;
+        StringHistogram strHist;
+    }
+
+    private int ioCostPerPage;
+    private int numPages;
+    private int numTuples;
+    private ColumnHistogram[] hists;
+    private TupleDesc tupleDesc;
+
+    public TableStats(int tableid, int ioCostPerPage) {
+        this(tableid, ioCostPerPage, Integer.MIN_VALUE, Integer.MAX_VALUE);
+    }
     /**
      * Create a new TableStats object, that keeps track of statistics on each
      * column of a table
@@ -78,7 +93,7 @@ public class TableStats {
      *            The cost per page of IO. This doesn't differentiate between
      *            sequential-scan IO and disk seeks.
      */
-    public TableStats(int tableid, int ioCostPerPage) {
+    public TableStats(int tableid, int ioCostPerPage, int minInt, int maxInt) {
         // For this function, you'll have to get the
         // DbFile for the table in question,
         // then scan through its tuples and calculate
@@ -87,8 +102,53 @@ public class TableStats {
         // necessarily have to (for example) do everything
         // in a single scan of the table.
         // some code goes here
-    }
+        this.ioCostPerPage = ioCostPerPage;
+        this.tupleDesc = Database.getCatalog().getTupleDesc(tableid);
+        int numFields = this.tupleDesc.numFields();
+        this.hists = new ColumnHistogram[numFields];
 
+        // column histograms
+        for (int i = 0; i < numFields; i++) {
+            Type type = tupleDesc.getFieldType(i);
+            hists[i] = new ColumnHistogram();
+            hists[i].type = type;
+            if (type == Type.INT_TYPE) {
+                hists[i].intHist = new IntHistogram(100, minInt, maxInt);
+            } else if (type == Type.STRING_TYPE) {
+                hists[i].strHist = new StringHistogram(100);
+            }
+        }
+
+        DbFileIterator iterator = Database.getCatalog().getDatabaseFile(tableid).iterator(new TransactionId());
+        try {
+            iterator.open();
+            while (iterator.hasNext()) {
+                this.numTuples++;
+                Tuple tuple = iterator.next();
+                for (int i = 0; i < numFields; i++) {
+                    Field field = tuple.getField(i);
+                    Type type = field.getType();
+                    if (type == Type.INT_TYPE) {
+                        hists[i].intHist.addValue(((IntField)field).getValue());
+                    } else if (type == Type.STRING_TYPE) {
+                        hists[i].strHist.addValue(((StringField)field).getValue());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Debug.log(-1, "failed to open iterator");
+        }
+
+        // numPages
+        DbFile dbfile = Database.getCatalog().getDatabaseFile(tableid);
+        if (dbfile instanceof HeapFile) {
+            this.numPages = ((HeapFile)dbfile).numPages();
+        } else if (dbfile instanceof BTreeFile) {
+            this.numPages = ((BTreeFile)dbfile).numPages();
+        } else {
+            assert(false);
+        }
+    }
     /**
      * Estimates the cost of sequentially scanning the file, given that the cost
      * to read a page is costPerPageIO. You can assume that there are no seeks
@@ -103,7 +163,7 @@ public class TableStats {
      */
     public double estimateScanCost() {
         // some code goes here
-        return 0;
+        return this.numPages * this.ioCostPerPage;
     }
 
     /**
@@ -117,7 +177,7 @@ public class TableStats {
      */
     public int estimateTableCardinality(double selectivityFactor) {
         // some code goes here
-        return 0;
+        return (int)Math.ceil((double)this.numTuples * selectivityFactor);
     }
 
     /**
@@ -150,6 +210,13 @@ public class TableStats {
      */
     public double estimateSelectivity(int field, Predicate.Op op, Field constant) {
         // some code goes here
+        if (Type.INT_TYPE == hists[field].type) {
+            return hists[field].intHist.estimateSelectivity(op, ((IntField)constant).getValue());
+        } else if (Type.STRING_TYPE == hists[field].type) {
+            return hists[field].strHist.estimateSelectivity(op, ((StringField)constant).getValue());
+        } else {
+            assert(false);
+        }
         return 1.0;
     }
 
@@ -158,7 +225,7 @@ public class TableStats {
      * */
     public int totalTuples() {
         // some code goes here
-        return 0;
+        return this.numTuples;
     }
 
 }

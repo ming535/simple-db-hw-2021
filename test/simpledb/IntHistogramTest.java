@@ -3,6 +3,7 @@ package simpledb;
 import org.junit.Test;
 import org.junit.Assert;
 
+import simpledb.common.Debug;
 import simpledb.execution.Predicate.Op;
 import simpledb.optimizer.IntHistogram;
 
@@ -35,6 +36,7 @@ public class IntHistogramTest {
 		// All the selectivities should add up to 1, by definition.
 		// Allow considerable leeway for rounding error, though 
 		// (Java double's are good to 15 or so significant figures)
+		Debug.log(-1, "selectivity: %f", selectivity);
 		Assert.assertTrue(selectivity > 0.99);
 	}
 	

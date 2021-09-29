@@ -124,7 +124,7 @@ public class TableStatsTest extends SimpleDbTestBase {
 		final Field atMin = new IntField(0);
 		final Field belowMin = new IntField(-10);
 		
-		TableStats s = new TableStats(this.tableId, IO_COST);
+		TableStats s = new TableStats(this.tableId, IO_COST, 0, 32);
 		
 		for (int col = 0; col < 10; col++) {
 			Assert.assertEquals(0.0, s.estimateSelectivity(col, Predicate.Op.EQUALS, aboveMax), 0.001);			
