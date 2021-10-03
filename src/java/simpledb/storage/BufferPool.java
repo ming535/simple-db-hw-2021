@@ -9,8 +9,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -34,14 +33,9 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
-    class PageFrame {
-        Object mutex;
-        Page page;
-    }
-
     private final int maxNumPages;
-    private final Lock bigLock = new ReentrantLock();
-    HashMap<PageId, Page> pageTable;
+    private ConcurrentHashMap<PageId, Page> pageTable;
+    private LockManager _lockManager;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -50,7 +44,8 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         this.maxNumPages = numPages;
-        pageTable = new HashMap<>();
+        pageTable = new ConcurrentHashMap<>();
+        _lockManager = new LockManager();
     }
     
     public static int getPageSize() {
@@ -85,28 +80,23 @@ public class BufferPool {
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
+        _lockManager.lockPage(tid, pid, perm);
+
         Page page;
         int tableid = pid.getTableId();
         Catalog catalog = Database.getCatalog();
         DbFile dbFile = catalog.getDatabaseFile(tableid);
-
-        bigLock.lock();
-        try {
-            page = pageTable.get(pid);
-            if (page != null) {
-                // do nothing
-            } else {
-                if (pageTable.size() >= maxNumPages) {
-                    evictPage();
-                }
-                assert(pageTable.size() < maxNumPages);
-                page = dbFile.readPage(pid);
-                pageTable.put(pid, page);
+        page = pageTable.get(pid);
+        if (page != null) {
+            // do nothing
+        } else {
+            if (pageTable.size() >= maxNumPages) {
+                evictPage();
             }
-        } finally {
-            bigLock.unlock();
+            assert(pageTable.size() >= maxNumPages);
+            page = dbFile.readPage(pid);
+            pageTable.put(pid, page);
         }
-
         return page;
     }
 
@@ -122,6 +112,7 @@ public class BufferPool {
     public  void unsafeReleasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        _lockManager.unlockPage(tid, pid);
     }
 
     /**
@@ -138,7 +129,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return _lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -194,7 +185,7 @@ public class BufferPool {
      * @param tid the transaction deleting the tuple.
      * @param t the tuple to delete
      */
-    public  void deleteTuple(TransactionId tid, Tuple t)
+    public void deleteTuple(TransactionId tid, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
