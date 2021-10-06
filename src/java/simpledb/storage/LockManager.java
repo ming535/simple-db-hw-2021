@@ -1,28 +1,117 @@
 package simpledb.storage;
 
+import simpledb.common.Database;
+import simpledb.common.Debug;
+import simpledb.common.LockMode;
 import simpledb.common.Permissions;
 import simpledb.transaction.TransactionId;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.StampedLock;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class LockManager {
     class PageLock {
-        StampedLock sl;
-        long stamp;
+        final private PageId _pid;
+        final private ReentrantLock _latch;
+        final private Condition _noSharedCond;
+        final private Condition _noExclusiveCond;
+        LockMode _mode;
+        HashSet<TransactionId> _writers;
+        HashSet<TransactionId> _readers;
 
-        public void lock(Permissions perm) {
-            if (perm == Permissions.READ_ONLY) {
-                stamp = sl.readLock();
-            } else if (perm == Permissions.READ_WRITE) {
-                stamp = sl.writeLock();
+        public PageLock(PageId pid) {
+            _pid = pid;
+            _latch = new ReentrantLock();
+            _noSharedCond = _latch.newCondition();
+            _noExclusiveCond = _latch.newCondition();
+            _mode = LockMode.None;
+            _writers = new HashSet();
+            _readers = new HashSet();
+        }
+
+        public void lock(TransactionId tid, Permissions perm) {
+            _latch.lock();
+            try {
+                while (true) {
+                    if (_mode == LockMode.SHARED) {
+                        assert(_readers.size() > 0);
+                        assert(_writers.size() == 0);
+
+                        if (perm == Permissions.READ_ONLY) {
+                            _readers.add(tid);
+                            break;
+                        } else if (perm == Permissions.READ_WRITE) {
+                            if (_readers.size() == 1 && _readers.contains(tid)) {
+                                // upgrade
+                                _mode = LockMode.EXCLUSIVE;
+                                _readers.remove(tid);
+                                _writers.add(tid);
+                                break;
+                            } else {
+                                _noSharedCond.await();
+                                continue;
+                            }
+                        }
+                    } else if (_mode == LockMode.EXCLUSIVE) {
+                        assert(_writers.size() == 1) : "_writers.size() == " + _writers.size();
+                        assert(_readers.size() == 0);
+
+                        if (_writers.contains(tid)) {
+                            // myself
+                            break;
+                        } else {
+                            _noExclusiveCond.await();
+                            continue;
+                        }
+                    } else if (_mode == LockMode.None) {
+                        assert(_writers.size() == 0);
+                        assert(_readers.size() == 0);
+                        if (perm == Permissions.READ_ONLY) {
+                            _mode = LockMode.SHARED;
+                            _readers.add(tid);
+                            break;
+                        } else if (perm == Permissions.READ_WRITE) {
+                            _mode = LockMode.EXCLUSIVE;
+                            _writers.add(tid);
+                            break;
+                        }
+                    } else {
+                        Debug.log(-1, "impossible");
+                        assert(false);
+                    }
+                }
+            } catch (Exception e) {
+                Debug.log(-1, "exception");
+                e.printStackTrace();
+            } finally {
+                _latch.unlock();
             }
         }
 
-        public void unlock() {
-            sl.unlock(stamp);
+        public void unlock(TransactionId tid) {
+            _latch.lock();
+            try {
+                if (_mode == LockMode.SHARED) {
+                    assert(_writers.size() == 0);
+                    _readers.remove(tid);
+                    if (_readers.size() == 0) {
+                        _mode = LockMode.None;
+                        _noSharedCond.signalAll();
+                    }
+                } else if (_mode == LockMode.EXCLUSIVE) {
+                    assert(_writers.size() == 1);
+                    _writers.remove(tid);
+                    assert(_writers.size() == 0);
+                    _mode = LockMode.None;
+                    _noExclusiveCond.signalAll();
+                }
+            } finally {
+                _latch.unlock();
+            }
         }
     }
 
@@ -37,11 +126,14 @@ public class LockManager {
     public void lockPage(TransactionId tid, PageId pid, Permissions perm) {
         PageLock pageLock = _pageLocksTable.get(pid);
         if (null == pageLock) {
-            pageLock = new PageLock();
-            pageLock.lock(perm);
-            _pageLocksTable.putIfAbsent(pid, pageLock);
+            pageLock = new PageLock(pid);
+            pageLock.lock(tid, perm);
+            PageLock prevLock = _pageLocksTable.putIfAbsent(pid, pageLock);
+            if (prevLock != null) {
+                prevLock.lock(tid, perm);
+            }
         } else {
-            pageLock.lock(perm);
+            pageLock.lock(tid, perm);
         }
 
         HashSet txnpages = _txnPagesTable.get(tid);
@@ -58,8 +150,9 @@ public class LockManager {
         PageLock pageLock = _pageLocksTable.get(pid);
         if (null == pageLock) {
             // there is no page lock for this page, do nothing
+            assert(false);
         } else {
-            pageLock.unlock();
+            pageLock.unlock(tid);
         }
 
         HashSet txnpages = _txnPagesTable.get(tid);
@@ -92,7 +185,7 @@ public class LockManager {
                     // this should not happen
                     assert(false);
                 } else {
-                    pageLock.unlock();
+                    pageLock.unlock(tid);
                 }
             }
         }
