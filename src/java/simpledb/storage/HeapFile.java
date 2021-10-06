@@ -4,6 +4,7 @@ import simpledb.common.Database;
 import simpledb.common.DbException;
 import simpledb.common.Debug;
 import simpledb.common.Permissions;
+import simpledb.index.BTreeFileEncoder;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
@@ -14,6 +15,8 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.nio.file.StandardOpenOption.READ;
 
@@ -45,7 +48,6 @@ public class HeapFile implements DbFile {
             this.numPage = hf.numPages();
             this.pageIdx = 0;
             this.opened = false;
-
         }
 
         /**
@@ -150,6 +152,7 @@ public class HeapFile implements DbFile {
 
     private TupleDesc td;
 
+    final private Lock fileLock = new ReentrantLock();
     /**
      * Constructs a heap file backed by the specified file.
      * 
@@ -222,7 +225,7 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
-        SeekableByteChannel sbc = Files.newByteChannel(this.file.toPath());
+        SeekableByteChannel sbc = Files.newByteChannel(this.file.toPath(), StandardOpenOption.WRITE);
         sbc.position(page.getId().getPageNumber() * BufferPool.getPageSize());
         ByteBuffer buffer = ByteBuffer.wrap(page.getPageData());
         sbc.write(buffer);
@@ -246,26 +249,32 @@ public class HeapFile implements DbFile {
     @Override
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
-        ArrayList<Page> retPages = new ArrayList<Page>();
+        ArrayList<Page> retPages = new ArrayList<>();
         // some code goes here
-        int curNumPages = numPages();
-        for (int i = 0 ; i < curNumPages; i++) {
-            PageId pageId = new HeapPageId(this.getId(), i);
-            HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
-            if (page.getNumEmptySlots() > 0) {
+        // if the last page doesn't have a free slot, extend a new page.
+        fileLock.lock();
+        try {
+            int curNumPages = numPages();
+            PageId lastPageId = new HeapPageId(this.getId(), curNumPages - 1);
+            HeapPage lastPage = (HeapPage)Database.getBufferPool().getPage(tid, lastPageId, Permissions.READ_ONLY);
+//            Debug.log(-1, "cureNumPages: %d, lastPage empty slots: %d", curNumPages, lastPage.getNumEmptySlots());
+            if (lastPage.getNumEmptySlots() > 0) {
+                HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, lastPageId, Permissions.READ_WRITE);
                 page.insertTuple(t);
                 retPages.add(page);
-                return retPages;
+            } else {
+                Database.getBufferPool().unsafeReleasePage(tid, lastPageId);
+                HeapPageId pageId = new HeapPageId(this.getId(), curNumPages);
+                HeapPage page = new HeapPage(pageId, HeapPage.createEmptyPageData());
+                page.insertTuple(t);
+                // file size will be extended here
+                Files.write(this.file.toPath(), page.getPageData(), StandardOpenOption.APPEND);
+                page = (HeapPage)Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
+                retPages.add(page);
             }
+        } finally {
+            fileLock.unlock();
         }
-
-        HeapPageId pageId = new HeapPageId(this.getId(), curNumPages);
-        HeapPage page = new HeapPage(pageId, HeapPage.createEmptyPageData());
-        page.insertTuple(t);
-        // file size will be extended here
-        Files.write(this.file.toPath(), page.getPageData(), StandardOpenOption.APPEND);
-        page = (HeapPage)Database.getBufferPool().getPage(tid, pageId, Permissions.READ_WRITE);
-        retPages.add(page);
         return retPages;
     }
 

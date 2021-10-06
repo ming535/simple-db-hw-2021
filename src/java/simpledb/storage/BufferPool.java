@@ -93,7 +93,7 @@ public class BufferPool {
             if (pageTable.size() >= maxNumPages) {
                 evictPage();
             }
-            assert(pageTable.size() >= maxNumPages);
+            assert(pageTable.size() <= maxNumPages);
             page = dbFile.readPage(pid);
             pageTable.put(pid, page);
         }

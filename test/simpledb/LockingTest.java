@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import junit.framework.JUnit4TestAdapter;
 import simpledb.common.Database;
+import simpledb.common.Debug;
 import simpledb.common.Permissions;
 import simpledb.common.Utility;
 import simpledb.storage.BufferPool;
@@ -37,6 +38,7 @@ public class LockingTest extends TestUtil.CreateHeapFile {
     // we should be able to add 504 tuples on an empty page.
     TransactionId tid = new TransactionId();
     for (int i = 0; i < 1025; ++i) {
+//      Debug.log(-1, "setup tuple %d", i);
       empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
     }
 
@@ -100,7 +102,7 @@ public class LockingTest extends TestUtil.CreateHeapFile {
     assertEquals(expected, t.acquired());
 
     // TODO(ghuo): yes, stop() is evil, but this is unit test cleanup
-    t.stop();
+//    t.stop();
   }
 
   /**
