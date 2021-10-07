@@ -8,6 +8,7 @@ import simpledb.transaction.TransactionId;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -189,6 +190,10 @@ public class LockManager {
                 }
             }
         }
-    };
+    }
+
+    public Set<PageId> txnPages(TransactionId tid) {
+        return _txnPagesTable.get(tid);
+    }
 
 }

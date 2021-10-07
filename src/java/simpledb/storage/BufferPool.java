@@ -6,9 +6,7 @@ import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -123,6 +121,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) {
         // some code goes here
         // not necessary for lab1|lab2
+        transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
@@ -142,6 +141,29 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // some code goes here
         // not necessary for lab1|lab2
+        if (commit) {
+            try {
+                flushPages(tid);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            // rollback
+            Set changedPageIds = _lockManager.txnPages(tid);
+            if (changedPageIds != null) {
+                Iterator<PageId> iter = changedPageIds.iterator();
+                while (iter.hasNext()) {
+                    PageId pid = iter.next();
+                    Page page = pageTable.get(pid);
+                    if (page.isDirty() == tid) {
+                        discardPage(pid);
+                    } else {
+                        assert(page.isDirty() == null);
+                    }
+                }
+            }
+        }
+        _lockManager.unlockAllPages(tid);
     }
 
     /**
@@ -190,7 +212,12 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         DbFile dbfile = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
-        dbfile.deleteTuple(tid, t);
+        List<Page> dirtyPages = dbfile.deleteTuple(tid, t);
+        for (int i = 0; i < dirtyPages.size(); i++) {
+            Page page = dirtyPages.get(i);
+            page.markDirty(true, tid);
+            pageTable.put(page.getId(), page);
+        }
     }
 
     /**
@@ -231,9 +258,10 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         Page page = pageTable.get(pid);
-        if (page != null) {
+        if (page != null && page.isDirty() != null) {
             DbFile dbfile = Database.getCatalog().getDatabaseFile(pid.getTableId());
             dbfile.writePage(page);
+            page.markDirty(false, null);
         }
 
     }
@@ -243,7 +271,14 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
-
+        Set changedPids = _lockManager.txnPages(tid);;
+        if (changedPids != null) {
+            Iterator<PageId> iter = changedPids.iterator();
+            while (iter.hasNext()) {
+                PageId pid = iter.next();
+                flushPage(pid);
+            }
+        }
 
     }
 
@@ -251,26 +286,37 @@ public class BufferPool {
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
-    private synchronized  void evictPage() throws DbException {
+    private synchronized void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
         // evict the first page scanned
         Iterator it = this.pageTable.entrySet().iterator();
-        if (it.hasNext()) {
+        PageId candidate = null;
+        while (it.hasNext()) {
             HashMap.Entry pair = (HashMap.Entry)it.next();
             PageId pageid = (PageId)pair.getKey();
             Page page = (Page)pair.getValue();
             TransactionId xid = page.isDirty();
             if (xid != null) {
-                try {
-                    flushPage(pageid);
-                } catch (Exception e) {
-                    throw new DbException("failed to flush page");
-                }
+                // do not evict dirty page
+//                try {
+//                    flushPage(pageid);
+//                } catch (Exception e) {
+//                    throw new DbException("failed to flush page");
+//                }
+            } else {
+                candidate = pageid;
+                break;
             }
-
-            it.remove();
         }
-    }
 
+        if (candidate == null) {
+            throw new DbException("no clean page");
+        }
+
+        TransactionId dummyXid = new TransactionId();
+        _lockManager.lockPage(dummyXid, candidate, Permissions.READ_WRITE);
+        pageTable.remove(candidate);
+        _lockManager.unlockPage(dummyXid, candidate);
+    }
 }
