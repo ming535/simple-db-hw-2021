@@ -88,10 +88,16 @@ public class BufferPool {
         if (page != null) {
             // do nothing
         } else {
+            // unlock the current page
+//            Debug.log(-1, "before evict page tid: %d, page: %d unlock, table size: %d, maxNumPages: %d",
+//                                        tid.getId(), pid.getPageNumber(), pageTable.size(), maxNumPages);
+            _lockManager.unlockPage(tid, pid);
             if (pageTable.size() >= maxNumPages) {
-                evictPage();
+                evictPage(tid);
             }
             assert(pageTable.size() <= maxNumPages);
+            // lock it again
+            _lockManager.lockPage(tid, pid, perm);
             page = dbFile.readPage(pid);
             pageTable.put(pid, page);
         }
@@ -155,9 +161,9 @@ public class BufferPool {
                 while (iter.hasNext()) {
                     PageId pid = iter.next();
                     Page page = pageTable.get(pid);
-                    if (page.isDirty() == tid) {
+                    if (page != null && page.isDirty() == tid) {
                         discardPage(pid);
-                    } else {
+                    } else if (page != null) {
                         assert(page.isDirty() == null);
                     }
                 }
@@ -286,7 +292,7 @@ public class BufferPool {
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
-    private synchronized void evictPage() throws DbException {
+    private synchronized void evictPage(TransactionId tid) throws DbException {
         // some code goes here
         // not necessary for lab1
         // evict the first page scanned
@@ -299,14 +305,19 @@ public class BufferPool {
             TransactionId xid = page.isDirty();
             if (xid != null) {
                 // do not evict dirty page
-//                try {
-//                    flushPage(pageid);
-//                } catch (Exception e) {
-//                    throw new DbException("failed to flush page");
-//                }
+//                Debug.log(-1, "evict page %d dirty", pageid.getPageNumber());
             } else {
-                candidate = pageid;
-                break;
+                if (!_lockManager.isLocked(pageid)) {
+                    candidate = pageid;
+                    Debug.log(-1, "evict page %d candidate found", pageid.getPageNumber());
+                    break;
+                } else if (_lockManager.holdsLock(tid, pageid)) {
+                    // I hold the lock myself, consider it as a candidate
+                    candidate = pageid;
+                    break;
+                } else {
+                    Debug.log(-1, "evict page %d locked", pageid.getPageNumber());
+                }
             }
         }
 
@@ -314,9 +325,13 @@ public class BufferPool {
             throw new DbException("no clean page");
         }
 
-        TransactionId dummyXid = new TransactionId();
-        _lockManager.lockPage(dummyXid, candidate, Permissions.READ_WRITE);
-        pageTable.remove(candidate);
-        _lockManager.unlockPage(dummyXid, candidate);
+        if (!_lockManager.holdsLock(tid, candidate)) {
+            // I do not hold lock on this page, just lock it and remove it from page table
+            _lockManager.lockPage(tid, candidate, Permissions.READ_WRITE);
+            pageTable.remove(candidate);
+            _lockManager.unlockPage(tid, candidate);
+        } else {
+            pageTable.remove(candidate);
+        }
     }
 }

@@ -89,6 +89,7 @@ public class LockManager {
                 Debug.log(-1, "exception");
                 e.printStackTrace();
             } finally {
+//                Debug.log(-1, "tid: %d, page: %d, locked", tid.getId(), _pid.getPageNumber());
                 _latch.unlock();
             }
         }
@@ -111,6 +112,7 @@ public class LockManager {
                     _noExclusiveCond.signalAll();
                 }
             } finally {
+//                Debug.log(-1, "tid: %d, page: %d, unlocked", tid.getId(), _pid.getPageNumber());
                 _latch.unlock();
             }
         }
@@ -170,6 +172,23 @@ public class LockManager {
             return false;
         } else {
             return txnpages.contains(pid);
+        }
+    }
+
+    public boolean isLocked(PageId pid) {
+        PageLock latch = _pageLocksTable.get(pid);
+        if (latch == null) {
+            return false;
+        } else {
+            if (latch._mode == LockMode.None) {
+                return false;
+            } else {
+//                Debug.log(-1, "mode: %s, readers.size(): %d, reader tid: %s",
+//                        latch._mode,
+//                        latch._readers.size(),
+//                        latch._readers.iterator().next().getId());
+                return true;
+            }
         }
     }
 
