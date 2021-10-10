@@ -170,6 +170,7 @@ public class BufferPool {
             }
         }
         _lockManager.unlockAllPages(tid);
+        _lockManager.removeDeps(tid);
     }
 
     /**
@@ -292,7 +293,7 @@ public class BufferPool {
      * Discards a page from the buffer pool.
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
-    private synchronized void evictPage(TransactionId tid) throws DbException {
+    private synchronized void evictPage(TransactionId tid) throws DbException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
         // evict the first page scanned
