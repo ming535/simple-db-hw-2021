@@ -9,10 +9,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import junit.framework.JUnit4TestAdapter;
 import simpledb.common.Database;
+import simpledb.common.Debug;
 import simpledb.common.Permissions;
 import simpledb.common.Utility;
 import simpledb.storage.BufferPool;
 import simpledb.storage.HeapPageId;
+import simpledb.storage.LockManager;
 import simpledb.storage.PageId;
 import simpledb.transaction.TransactionId;
 
@@ -93,6 +95,7 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
     LockGrabber lg2Write = startGrabber(tid2, p0, Permissions.READ_WRITE);
 
     while (true) {
+      Debug.log(-1, "inside while");
       Thread.sleep(POLL_INTERVAL);
 
       assertFalse(lg1Write.acquired() && lg2Write.acquired());
@@ -105,6 +108,7 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
         Thread.sleep(rand.nextInt(WAIT_INTERVAL));
 
         tid1 = new TransactionId();
+        Debug.log(-1, "tid1 p0 READ_ONLY; tid1 p1 READ_WRITE");
         lg1Read = startGrabber(tid1, p0, Permissions.READ_ONLY);
         lg1Write = startGrabber(tid1, p1, Permissions.READ_WRITE);
       }
@@ -115,6 +119,7 @@ public class DeadlockTest extends TestUtil.CreateHeapFile {
         Thread.sleep(rand.nextInt(WAIT_INTERVAL));
 
         tid2 = new TransactionId();
+        Debug.log(-1, "tid2 p1 READ_ONLY; tid2 p0 READ_WRITE");
         lg2Read = startGrabber(tid2, p1, Permissions.READ_ONLY);
         lg2Write = startGrabber(tid2, p0, Permissions.READ_WRITE);
       }

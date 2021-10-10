@@ -342,7 +342,11 @@ public class TestUtil {
                 synchronized(alock) {
                     acquired = true;
                 }
+                Debug.log(-1, "no exception tid %d, pid %d, perm: %s, acquired: %b", tid.getId(), pid.getPageNumber(), perm, acquired);
+
             } catch (Exception e) {
+                Debug.log(-1, "exception tid %d, pid: %d, perm: %s, acquired: %b", tid.getId(), pid.getPageNumber(), perm, acquired);
+
                 e.printStackTrace();
                 synchronized(elock) {
                     error = e;
