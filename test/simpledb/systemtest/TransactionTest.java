@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import simpledb.common.Database;
 import simpledb.common.DbException;
+import simpledb.common.Debug;
 import simpledb.execution.Delete;
 import simpledb.execution.Insert;
 import simpledb.execution.Query;
@@ -106,9 +107,12 @@ public class TransactionTest extends SimpleDbTestBase {
                         // read the value out of the table
                         Query q1 = new Query(ss1, tr.getId());
                         q1.start();
+                        Debug.log(-1, "xid: %d, reading row", tr.getId().getId());
                         Tuple tup = q1.next();
                         IntField intf = (IntField) tup.getField(0);
                         int i = intf.getValue();
+
+                        Debug.log(-1, "xid: %d, read row, field 0: %d", tr.getId().getId(), i);
 
                         // create a Tuple so that Insert can insert this new value
                         // into the table.
@@ -126,9 +130,13 @@ public class TransactionTest extends SimpleDbTestBase {
 
                         Query q2 = new Query(delOp, tr.getId());
 
+                        Debug.log(-1, "xid: %d, deleting row", tr.getId().getId());
+
                         q2.start();
                         q2.next();
                         q2.close();
+
+                        Debug.log(-1, "xid: %d, delete row", tr.getId().getId());
 
                         // set up a Set with a tuple that is one higher than the old one.
                         Set<Tuple> hs = new HashSet<>();
@@ -138,15 +146,17 @@ public class TransactionTest extends SimpleDbTestBase {
                         // insert this new tuple into the table
                         Insert insOp = new Insert(tr.getId(), ti, tableId);
                         Query q3 = new Query(insOp, tr.getId());
+                        Debug.log(-1, "xid: %d, inserting new row, field 0: %d", tr.getId().getId(), i+1);
                         q3.start();
                         q3.next();
                         q3.close();
-
+                        Debug.log(-1, "xid: %d, insert new row, field 0: %d", tr.getId().getId(), i+1);
                         tr.commit();
                         break;
                     } catch (TransactionAbortedException te) {
                         //System.out.println("thread " + tr.getId() + " killed");
                         // give someone else a chance: abort the transaction
+                        Debug.log(-1, "xid: %d, abort", tr.getId().getId());
                         tr.transactionComplete(true);
                         latch.stillParticipating();
                     }

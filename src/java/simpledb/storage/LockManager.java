@@ -84,7 +84,7 @@ public class LockManager {
                         assert(false);
                     }
                 }
-            } catch (Exception e) {
+            } catch (InterruptedException e) {
                 Debug.log(-1, "exception");
                 e.printStackTrace();
             } finally {
@@ -256,7 +256,7 @@ public class LockManager {
         Iterator<TransactionId> iter = deps.iterator();
         while (iter.hasNext()) {
             TransactionId depTxnId = iter.next();
-            assert(depTxnId.getId() != tid.getId());
+//            assert(depTxnId.getId() != tid.getId());
             waitFor.add(depTxnId);
         }
         _waitGraph.put(tid, waitFor);
@@ -340,7 +340,7 @@ public class LockManager {
         if (detectCycle(tid, deps)) {
             removeDeps(tid);
             Debug.log(-1, "detect deadlock, will abort tid: %d", tid.getId());
-            throw new TransactionAbortedException();
+            throw new TransactionAbortedException(String.format("xid: %d", tid.getId()));
         }
     }
 }

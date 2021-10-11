@@ -147,6 +147,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // some code goes here
         // not necessary for lab1|lab2
+        Debug.log(-1, "xid: %d, commit: %b", tid.getId(), commit);
         if (commit) {
             try {
                 flushPages(tid);
@@ -161,7 +162,9 @@ public class BufferPool {
                 while (iter.hasNext()) {
                     PageId pid = iter.next();
                     Page page = pageTable.get(pid);
+                    Debug.log(-1, "abort xid: %d, page: %d", tid.getId(), pid.getPageNumber());
                     if (page != null && page.isDirty() == tid) {
+                        Debug.log(-1, "abort xid: %d, discard page: %d", tid.getId(), pid.getPageNumber());
                         discardPage(pid);
                     } else if (page != null) {
                         assert(page.isDirty() == null);
@@ -169,8 +172,8 @@ public class BufferPool {
                 }
             }
         }
-        _lockManager.unlockAllPages(tid);
         _lockManager.removeDeps(tid);
+        _lockManager.unlockAllPages(tid);
     }
 
     /**

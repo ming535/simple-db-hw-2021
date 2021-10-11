@@ -312,7 +312,9 @@ public class HeapPage implements Page {
 
         int slot = t.getRecordId().getTupleNumber();
         if (!isSlotUsed(slot)) {
-            throw new DbException("slot not used");
+            throw new DbException(String.format("slot not used: pageId: %d, tupleNumber: %d",
+                                                t.getRecordId().getPageId().getPageNumber(),
+                                                t.getRecordId().getTupleNumber()));
         }
 
         tuples[slot] = null;

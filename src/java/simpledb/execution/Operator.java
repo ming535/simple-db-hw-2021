@@ -72,7 +72,7 @@ public abstract class Operator implements OpIterator {
 
     @Override
     public void open() throws DbException, TransactionAbortedException {
-        Debug.log(-1, "Operator open");
+//        Debug.log(-1, "Operator open");
         this.open = true;
     }
 
